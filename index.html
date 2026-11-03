@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f5ef">
+<title>いろのしずく — RGB Drop Studio</title>
+<style>
+  :root { --paper:#f5f5ef; --ink:#273c32; --muted:#777e73; --line:#dce0d5; --r:#f15762; --g:#53ab76; --b:#6592ee; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:"Helvetica Neue",Arial,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif; -webkit-font-smoothing:antialiased; }
+  button,input { font:inherit; }
+  button { cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  button:focus-visible,input:focus-visible { outline:3px solid #729485; outline-offset:5px; }
+  button { color:inherit; }
+  [hidden] { display:none !important; }
+  .mono { font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace; font-variant-numeric:tabular-nums; }
+  .app { min-height:100svh; overflow:hidden; }
+  .topbar { height:100px; display:flex; align-items:center; justify-content:space-between; padding:0 4.2%; gap:20px; position:relative; z-index:2; }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .brand-icon { width:32px; height:35px; }
+  .brand-name { font-size:18px; font-weight:600; letter-spacing:.12em; }
+  .brand-caption { font-size:9px; letter-spacing:.23em; margin-top:5px; color:var(--muted); }
+  .collection-count { display:flex; align-items:center; gap:14px; font-size:10px; letter-spacing:.18em; }
+  .count { width:35px; height:35px; border:1px solid #d4dbce; border-radius:50%; display:grid; place-items:center; font-size:13px; letter-spacing:0; }
+  .stage { position:relative; min-height:450px; height:calc(100svh - 350px); margin-bottom:250px; isolation:isolate; }
+  .stage:before { content:""; position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at 57% 55%,#dde5d54d,transparent 48%); }
+  .intro { position:absolute; top:27px; left:4.2%; z-index:1; pointer-events:none; }
+  .eyebrow { font-size:10px; font-weight:500; letter-spacing:.2em; color:var(--muted); display:flex; align-items:center; gap:10px; }
+  .eyebrow:before { content:""; width:24px; height:1px; background:#8e9f90; }
+  h1 { font-weight:500; font-size:clamp(38px,4.3vw,66px); letter-spacing:.06em; line-height:1.45; margin:18px 0 16px; }
+  .intro p { font-size:12px; color:var(--muted); line-height:2.1; letter-spacing:.06em; margin:0; }
+  .empty-hint { position:absolute; bottom:36px; left:4.2%; display:flex; align-items:center; gap:12px; font-size:10px; color:#899083; letter-spacing:.07em; pointer-events:none; }
+  .empty-hint svg { width:20px; height:24px; }
+  .mix-anchor { position:absolute; top:51%; left:56%; width:240px; transform:translate(-50%,-50%); z-index:3; }
+  .pipettes { display:flex; justify-content:center; gap:56px; position:absolute; left:0; right:0; top:-59px; }
+  .pipette { display:flex; flex-direction:column; align-items:center; gap:10px; color:#8a9386; font-size:9px; }
+  .pipette-dot { width:8px; height:8px; border-radius:50%; background:var(--channel); box-shadow:0 0 0 5px color-mix(in srgb,var(--channel) 10%,transparent); transition:box-shadow .2s; }
+  .pipette.active .pipette-dot { box-shadow:0 0 0 9px color-mix(in srgb,var(--channel) 16%,transparent); }
+  .vessel { position:relative; width:240px; height:258px; filter:drop-shadow(0 20px 23px #45564d12); }
+  .vessel-svg { width:100%; height:100%; overflow:visible; }
+  .vessel.splash { animation:soft-splash .5s ease; }
+  @keyframes soft-splash { 0%,100% { transform:scale(1,1); } 35% { transform:scale(1.035,.97); } 70% { transform:scale(.992,1.014); } }
+  .current-code { position:absolute; left:0; right:0; bottom:65px; text-align:center; color:var(--vessel-ink,#fff); font-size:19px; letter-spacing:.03em; font-weight:500; transition:color .3s; pointer-events:none; }
+  .current-rgb { display:block; margin-top:8px; font-size:9px; letter-spacing:.06em; opacity:.75; }
+  .vessel-caption { text-align:center; margin-top:18px; font-size:10px; letter-spacing:.13em; color:var(--muted); }
+  .mix-status { display:block; min-height:20px; text-align:center; font-size:10px; color:#92988c; margin-top:9px; letter-spacing:.03em; }
+  .vessel-shadow { width:132px; height:15px; margin:21px auto 0; background:radial-gradient(ellipse,#53684b20,transparent 70%); }
+  .drop-flight { position:absolute; width:19px; height:24px; z-index:4; pointer-events:none; filter:drop-shadow(0 3px 4px #3848341c); }
+  .saved-drop { position:absolute; width:115px; height:145px; padding:0; background:none; border:0; text-align:center; z-index:2; animation:float var(--float-duration,7s) ease-in-out var(--float-delay,0s) infinite; }
+  .saved-drop .drop-art { display:block; width:100%; height:112px; filter:drop-shadow(0 12px 10px #52645313); transition:filter .25s,scale .25s; }
+  .saved-drop:hover .drop-art { filter:drop-shadow(0 15px 14px #52645324); scale:1.05; }
+  .saved-code { display:inline-block; font-size:10px; letter-spacing:.04em; color:#727f70; margin-top:7px; background:#f5f5efbf; border-radius:6px; padding:3px 5px; }
+  @keyframes float { 0%,100% { transform:translate(0,0) rotate(-3deg); } 50% { transform:translate(5px,-13px) rotate(3deg); } }
+  .saved-drop.just-saved { animation:arrive .65s ease-out, float var(--float-duration,7s) ease-in-out .65s infinite; }
+  @keyframes arrive { from { opacity:0; scale:.55; } to { opacity:1; scale:1; } }
+  .mixer { position:fixed; bottom:max(24px,env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:min(1160px,91.6%); background:#ffffffeb; border:1px solid #e4e7dc; border-radius:24px; box-shadow:0 8px 50px #4c5e4010; padding:23px 30px 20px; z-index:10; backdrop-filter:blur(20px); }
+  .mixer-head { display:flex; justify-content:space-between; align-items:center; gap:20px; margin-bottom:25px; }
+  .mixer-title { font-size:13px; font-weight:600; letter-spacing:.1em; margin:0; }
+  .mixer-description { display:block; color:var(--muted); font-size:10px; font-weight:400; letter-spacing:.04em; margin-top:7px; }
+  .mixer-actions { display:flex; align-items:center; gap:20px; }
+  .hex-copy { display:flex; align-items:center; gap:10px; background:none; border:0; padding:9px 3px; font-size:15px; }
+  .hex-copy svg { width:14px; height:14px; color:#96a38f; }
+  .save-button { display:flex; align-items:center; justify-content:center; gap:12px; min-height:44px; padding:0 23px; border:0; background:#30483a; color:white; border-radius:12px; font-size:11px; letter-spacing:.06em; transition:background .2s,transform .2s; }
+  .save-button:hover { background:#45624e; }
+  .save-button:active { transform:scale(.98); }
+  .save-button svg { width:16px; height:18px; }
+  .channels { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:38px; }
+  .channel-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .channel-label { display:flex; align-items:center; gap:9px; font-size:11px; letter-spacing:.07em; }
+  .channel-letter { width:21px; height:21px; display:grid; place-items:center; border-radius:7px; background:color-mix(in srgb,var(--channel) 11%,white); color:var(--channel); font-size:10px; font-weight:700; }
+  .channel-value { width:53px; min-height:28px; border:1px solid #e8eade; border-radius:7px; background:#fcfcf9; text-align:right; font-size:12px; padding:3px 5px; appearance:textfield; }
+  .channel-value::-webkit-inner-spin-button { appearance:none; }
+  .range { display:block; width:100%; height:31px; margin:0; background:none; appearance:none; cursor:ew-resize; touch-action:pan-y; }
+  .range::-webkit-slider-runnable-track { height:7px; border-radius:10px; background:linear-gradient(90deg,#eeeeea,var(--channel)); }
+  .range::-moz-range-track { height:7px; border-radius:10px; background:linear-gradient(90deg,#eeeeea,var(--channel)); }
+  .range::-webkit-slider-thumb { appearance:none; height:19px; width:19px; background:white; border:2px solid var(--channel); box-shadow:0 2px 4px #0000000d; border-radius:50%; margin-top:-6px; }
+  .range::-moz-range-thumb { height:15px; width:15px; background:white; border:2px solid var(--channel); box-shadow:0 2px 4px #0000000d; border-radius:50%; }
+  .range-scale { display:flex; justify-content:space-between; font-size:8px; color:#a1a79a; }
+  .storage-note { position:fixed; bottom:5px; left:0; right:0; text-align:center; z-index:11; font-size:9px; letter-spacing:.03em; color:#87907f; margin:0; }
+  .storage-note.error { color:#b54332; }
+  .toast { position:fixed; top:25px; left:50%; transform:translate(-50%,-12px); z-index:30; background:#30483a; border-radius:12px; color:white; padding:14px 20px; max-width:calc(100% - 32px); font-size:12px; box-shadow:0 4px 18px #273c3220; opacity:0; pointer-events:none; transition:opacity .25s,transform .25s; display:flex; align-items:center; gap:14px; }
+  .toast.show { opacity:1; transform:translate(-50%,0); pointer-events:auto; }
+  .undo { padding:4px 0; font-size:12px; color:#d9efba; background:none; border:0; text-decoration:underline; white-space:nowrap; }
+  dialog { width:min(355px,calc(100% - 32px)); padding:30px; border:1px solid #e1e6da; border-radius:25px; background:#fafbf6; color:var(--ink); box-shadow:0 24px 100px #273c3233; }
+  dialog::backdrop { background:#283a3052; backdrop-filter:blur(4px); }
+  .dialog-close { position:absolute; right:12px; top:12px; width:36px; height:36px; border:0; background:none; font-size:24px; color:#86907d; }
+  .detail-preview { height:130px; margin:4px auto 20px; width:135px; }
+  .detail-hex { font-size:24px; text-align:center; margin:0 0 12px; letter-spacing:.02em; }
+  .detail-rgb { color:var(--muted); text-align:center; font-size:12px; margin:0 0 25px; }
+  .dialog-actions { display:grid; gap:9px; }
+  .dialog-actions button { border:1px solid #dde4d4; background:white; border-radius:10px; min-height:44px; padding:10px; font-size:12px; }
+  .dialog-actions .primary { background:#30483a; border-color:#30483a; color:white; }
+  .dialog-actions .delete { background:none; border:0; color:#989d90; font-size:11px; }
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+  @media (min-width:1550px) { .mix-anchor { left:53%; } }
+  @media (max-width:900px) and (min-width:601px) { h1 { font-size:37px; } .mix-anchor { left:60%; width:210px; } .vessel { width:210px; height:228px; } .current-code { bottom:56px; } .intro p { max-width:230px; } .channels { gap:22px; } .mixer { padding:22px; } }
+  @media (max-width:600px) {
+    .topbar { height:79px; padding:0 22px; }
+    .brand-name { font-size:14px; }
+    .brand-icon { width:27px; height:29px; }
+    .brand-caption { font-size:7px; }
+    .collection-count { gap:8px; font-size:8px; }
+    .count { width:29px; height:29px; font-size:11px; }
+    .stage { min-height:405px; height:calc(100svh - 348px); margin-bottom:269px; }
+    .intro { top:12px; left:22px; }
+    .eyebrow { font-size:8px; }
+    h1 { font-size:clamp(17px,5vw,22px); margin:11px 0 0; line-height:1.35; letter-spacing:.03em; }
+    h1 br { display:none; }
+    .intro p { display:none; }
+    .mix-anchor { top:228px; left:50%; width:180px; }
+    .vessel { width:180px; height:193px; }
+    .pipettes { top:-37px; gap:40px; }
+    .pipette { gap:7px; font-size:8px; }
+    .pipette-dot { width:6px; height:6px; }
+    .current-code { font-size:16px; bottom:44px; }
+    .current-rgb { font-size:8px; margin-top:6px; }
+    .vessel-caption { font-size:9px; margin-top:12px; }
+    .mix-status { font-size:9px; margin-top:6px; }
+    .vessel-shadow { margin-top:9px; }
+    .empty-hint { left:0; right:0; bottom:2px; justify-content:center; font-size:9px; }
+    .mixer { width:calc(100% - 24px); bottom:max(23px,env(safe-area-inset-bottom)); border-radius:19px; padding:17px 17px 15px; }
+    .mixer-head { gap:10px; margin-bottom:13px; }
+    .mixer-title { font-size:11px; }
+    .mixer-description { display:none; }
+    .mixer-actions { gap:11px; }
+    .hex-copy { font-size:12px; gap:6px; }
+    .hex-copy svg { width:12px; }
+    .save-button { padding:0 12px; gap:6px; min-height:40px; font-size:10px; }
+    .save-button svg { width:13px; }
+    .channels { display:flex; flex-direction:column; gap:3px; }
+    .channel { display:grid; grid-template-columns:48px minmax(0,1fr) 43px; align-items:center; gap:10px; position:relative; min-height:43px; }
+    .channel-head { display:contents; }
+    .channel-label { grid-column:1; grid-row:1; font-size:0; }
+    .channel-letter { width:26px; height:26px; font-size:11px; }
+    .channel-value { grid-column:3; grid-row:1; width:43px; font-size:16px; }
+    .range { grid-column:2; grid-row:1; height:43px; }
+    .range::-webkit-slider-runnable-track { height:8px; }
+    .range::-webkit-slider-thumb { width:22px; height:22px; margin-top:-7px; }
+    .range-scale { display:none; }
+    .saved-drop { width:87px; height:116px; }
+    .saved-drop .drop-art { height:85px; }
+    .saved-code { font-size:9px; margin-top:2px; }
+    .storage-note { font-size:8px; }
+  }
+  @media (max-width:355px) { .collection-count .count-label { display:none; } .mixer { padding-left:12px; padding-right:12px; } .mixer-actions { gap:8px; } .hex-copy { font-size:11px; } .save-button { padding:0 9px; } .save-button svg { display:none; } .mix-anchor { width:160px; } .vessel { width:160px; height:172px; } .current-code { font-size:14px; bottom:39px; } .saved-drop { width:66px; height:98px; } .saved-drop .drop-art { height:66px; } }
+  @media (max-width:600px) and (max-height:639px) { .mix-anchor { width:125px; } .vessel { width:125px; height:135px; } .current-code { font-size:12px; bottom:30px; } .current-rgb { font-size:6px; margin-top:4px; } .vessel-caption { margin-top:8px; font-size:8px; } .mix-status,.vessel-shadow { display:none; } .pipettes { top:-25px; gap:29px; } .pipette { font-size:7px; gap:5px; } }
+  @media (min-width:601px) and (max-height:650px) { .topbar { height:72px; } .intro { top:15px; } h1 { font-size:32px; } .intro p { font-size:10px; } .mix-anchor { width:168px; } .vessel { width:168px; height:181px; } .current-code { font-size:14px; bottom:44px; } .current-rgb { font-size:8px; } .pipettes { top:-29px; gap:37px; } .pipette { gap:6px; font-size:8px; } .vessel-caption { margin-top:9px; } .mix-status { margin-top:4px; } .vessel-shadow { margin-top:8px; } .mixer { padding:14px 22px; bottom:22px; } .mixer-head { margin-bottom:8px; } .mixer-description,.range-scale { display:none; } }
+  @media (min-width:601px) and (max-height:480px) { .topbar { height:54px; } .brand-name { font-size:14px; } .brand-icon { width:26px; } .brand-caption { font-size:7px; } .mix-anchor { width:112px; } .vessel { width:112px; height:121px; } .current-code { font-size:11px; bottom:30px; } .current-rgb { font-size:6px; margin-top:4px; } .vessel-caption,.mix-status,.vessel-shadow { display:none; } .pipettes { top:-22px; gap:24px; } .pipette-dot { width:5px; height:5px; } h1 { font-size:27px; margin-top:10px; } .intro p { display:none; } .saved-drop { width:70px; height:100px; } .saved-drop .drop-art { height:70px; } .saved-code { font-size:8px; } }
+  @media (prefers-reduced-motion:reduce) { *,*:before,*:after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs>
+  <linearGradient id="glass" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#fff" stop-opacity=".57"/><stop offset=".4" stop-color="#fff" stop-opacity=".04"/><stop offset=".74" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".27"/></linearGradient>
+  <radialGradient id="shine" cx=".3" cy=".18" r=".7"><stop stop-color="#fff" stop-opacity=".5"/><stop offset=".65" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  <linearGradient id="edge" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".8"/><stop offset=".5" stop-color="#fff" stop-opacity=".04"/><stop offset="1" stop-color="#fff" stop-opacity=".5"/></linearGradient>
+</defs></svg>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><svg class="brand-icon" viewBox="0 0 40 44" aria-hidden="true"><path d="M20 2C8 2 3 8 3 22s5 20 17 20 17-6 17-20S32 2 20 2" fill="#879f89"/><path d="M12 10Q8 13 8 20" stroke="#e3edda" stroke-width="3" stroke-linecap="round" fill="none"/></svg><div><div class="brand-name">いろのしずく</div><div class="brand-caption">RGB DROP STUDIO</div></div></div>
+    <div class="collection-count"><span class="count-label">MY COLORS</span><span class="count mono" id="savedCount">0</span></div>
+  </header>
+  <main>
+    <section class="stage" id="stage" aria-label="色のしずくのアトリエ">
+      <div class="intro"><div class="eyebrow">A LITTLE COLOR, A LITTLE JOY</div><h1>色をつくる。<br>好きが浮かぶ。</h1><p>赤、緑、青をひとしずくずつ。<br>あなただけの色を、この空間に。</p></div>
+      <div id="savedDrops" aria-label="保存した色"></div>
+      <div class="mix-anchor" id="mixAnchor">
+        <div class="pipettes" aria-hidden="true">
+          <div class="pipette" data-pipette="0" style="--channel:var(--r)"><span class="pipette-dot"></span><span class="mono">R</span></div>
+          <div class="pipette" data-pipette="1" style="--channel:var(--g)"><span class="pipette-dot"></span><span class="mono">G</span></div>
+          <div class="pipette" data-pipette="2" style="--channel:var(--b)"><span class="pipette-dot"></span><span class="mono">B</span></div>
+        </div>
+        <div class="vessel" id="vessel">
+          <svg class="vessel-svg" viewBox="0 0 240 258" aria-hidden="true" id="vesselSvg"></svg>
+          <div class="current-code mono"><span id="currentHex">#98B8A6</span><span class="current-rgb" id="currentRGB">RGB 152 · 184 · 166</span></div>
+        </div>
+        <div class="vessel-caption">いま、つくっている色</div>
+        <span class="mix-status" id="mixStatus">バーを動かして、色を注いでみよう</span>
+        <div class="vessel-shadow" aria-hidden="true"></div>
+      </div>
+      <div class="empty-hint" id="emptyHint"><svg viewBox="0 0 24 28" aria-hidden="true"><path d="M12 2C4 2 2 6 2 14s2 12 10 12 10-4 10-12S20 2 12 2" fill="none" stroke="#a3b099" stroke-width="1"/></svg>保存した色が、ここにぷかぷか浮かびます</div>
+    </section>
+    <section class="mixer" aria-labelledby="mixerTitle">
+      <div class="mixer-head">
+        <h2 class="mixer-title" id="mixerTitle">色を混ぜる<span class="mixer-description">3本のバーから、ひとしずくずつ。</span></h2>
+        <div class="mixer-actions">
+          <button class="hex-copy mono" id="copyCurrent" type="button" aria-label="現在のカラーコードをコピー"><span id="targetHex">#98B8A6</span><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="7" y="7" width="10" height="11" rx="2"/><path d="M12 4V2H3v11h2"/></svg></button>
+          <button class="save-button" id="saveColor" type="button"><svg viewBox="0 0 20 22" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M10 1C3 1 1 5 1 11s2 10 9 10 9-4 9-10S17 1 10 1Z"/><path d="M10 7v8M6 11h8"/></svg>この色を保存</button>
+        </div>
+      </div>
+      <div class="channels">
+        <div class="channel" style="--channel:var(--r)"><div class="channel-head"><label for="rangeR" class="channel-label"><span class="channel-letter mono">R</span>赤</label><input type="number" id="valueR" class="channel-value mono" min="0" max="255" step="1" value="152" aria-label="赤の値"></div><input class="range" type="range" id="rangeR" min="0" max="255" step="1" value="152" aria-label="赤の量"><div class="range-scale mono"><span>0</span><span>255</span></div></div>
+        <div class="channel" style="--channel:var(--g)"><div class="channel-head"><label for="rangeG" class="channel-label"><span class="channel-letter mono">G</span>緑</label><input type="number" id="valueG" class="channel-value mono" min="0" max="255" step="1" value="184" aria-label="緑の値"></div><input class="range" type="range" id="rangeG" min="0" max="255" step="1" value="184" aria-label="緑の量"><div class="range-scale mono"><span>0</span><span>255</span></div></div>
+        <div class="channel" style="--channel:var(--b)"><div class="channel-head"><label for="rangeB" class="channel-label"><span class="channel-letter mono">B</span>青</label><input type="number" id="valueB" class="channel-value mono" min="0" max="255" step="1" value="166" aria-label="青の値"></div><input class="range" type="range" id="rangeB" min="0" max="255" step="1" value="166" aria-label="青の量"><div class="range-scale mono"><span>0</span><span>255</span></div></div>
+      </div>
+    </section>
+  </main>
+  <p class="storage-note" id="storageNote">保存した色は、このブラウザに自動で残ります</p>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toastText"></span><button type="button" class="undo" id="undoDelete" hidden>元に戻す</button></div>
+<span class="sr-only" role="status" aria-live="polite" id="liveStatus"></span>
+<dialog id="colorDetail" aria-labelledby="detailHex">
+  <button type="button" class="dialog-close" id="closeDetail" aria-label="閉じる">×</button>
+  <div class="detail-preview" id="detailPreview" aria-hidden="true"></div>
+  <h2 class="detail-hex mono" id="detailHex"></h2><p class="detail-rgb mono" id="detailRGB"></p>
+  <div class="dialog-actions"><button type="button" class="primary" id="copyDetail">カラーコードをコピー</button><button type="button" id="remixColor">この色からつくる</button><button type="button" class="delete" id="deleteColor">このしずくを削除</button></div>
+</dialog>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const STORAGE_KEY = 'iro-droplet-studio.v1';
+  const CHANNELS = ['R', 'G', 'B'];
+  const PURE = ['#FF0000', '#00FF00', '#0000FF'];
+  const WORDS = ['赤', '緑', '青'];
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  let rgb = [152, 184, 166];
+  let visibleRGB = rgb.slice();
+  let saved = [];
+  let selectedId = null;
+  let lastDeleted = null;
+  let queue = [];
+  let pouring = false;
+  let generation = 0;
+  let colorFrame = 0;
+  let saveTimer = 0;
+  let toastTimer = 0;
+  let storageBroken = false;
+  const validRGB = value => Array.isArray(value) && value.length === 3 && value.every(v => Number.isInteger(v) && v >= 0 && v <= 255);
+  const clamp = value => Math.max(0, Math.min(255, Math.round(Number(value) || 0)));
+  const hex = values => '#' + values.map(v => clamp(v).toString(16).padStart(2, '0')).join('').toUpperCase();
+  const cssRGB = values => `rgb(${values.map(clamp).join(',')})`;
+  const id = () => globalThis.crypto?.randomUUID?.() || `drop-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  // A true superellipse: |x/a|^n + |y/b|^n = 1, with n = 3.6.
+  function superellipse(cx, cy, a, b, n = 3.6) {
+    const points = [];
+    for (let i = 0; i <= 120; i++) {
+      const t = i * Math.PI * 2 / 120, c = Math.cos(t), s = Math.sin(t);
+      const x = cx + a * Math.sign(c) * Math.pow(Math.abs(c), 2 / n);
+      const y = cy + b * Math.sign(s) * Math.pow(Math.abs(s), 2 / n);
+      points.push(`${i ? 'L' : 'M'}${x.toFixed(2)},${y.toFixed(2)}`);
+    }
+    return points.join(' ') + 'Z';
+  }
+  const SHAPE = superellipse(120, 129, 108, 117);
+  function dropSVG(values) {
+    return `<svg viewBox="0 0 240 258" width="100%" height="100%" aria-hidden="true"><path d="${SHAPE}" fill="${hex(values)}"/><path d="${SHAPE}" fill="url(#glass)"/><path d="${SHAPE}" fill="url(#shine)"/><path d="${SHAPE}" fill="none" stroke="url(#edge)" stroke-width="2"/><path d="M52 69Q52 45 78 40" fill="none" stroke="white" stroke-width="7" stroke-linecap="round" opacity=".45"/><ellipse cx="194" cy="188" rx="9" ry="14" fill="white" opacity=".13"/></svg>`;
+  }
+  $('vesselSvg').innerHTML = `<path id="mixedFill" d="${SHAPE}" fill="${hex(rgb)}"/><path d="${SHAPE}" fill="url(#glass)"/><path d="${SHAPE}" fill="url(#shine)"/><path d="${SHAPE}" fill="none" stroke="url(#edge)" stroke-width="2"/><path d="M49 76Q47 44 81 39" fill="none" stroke="white" stroke-width="7" stroke-linecap="round" opacity=".42"/><ellipse cx="192" cy="187" rx="10" ry="16" fill="white" opacity=".12"/><circle cx="178" cy="214" r="4" fill="white" opacity=".24"/>`;
+
+  function warnStorage() {
+    storageBroken = true;
+    $('storageNote').textContent = '保存できませんでした。このブラウザの保存設定・空き容量をご確認ください。';
+    $('storageNote').classList.add('error');
+  }
+  function readStorage() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (!data || data.version !== 1) return;
+      if (validRGB(data.current)) rgb = data.current.slice();
+      if (Array.isArray(data.saved)) {
+        const ids = new Set();
+        saved = data.saved.filter(item => item && typeof item.id === 'string' && validRGB(item.rgb) && !ids.has(item.id) && ids.add(item.id)).map(item => ({id:item.id, rgb:item.rgb.slice()}));
+      }
+    } catch (error) {
+      // A damaged record must not prevent a new palette from being made.
+      if (error instanceof SyntaxError) {
+        $('storageNote').textContent = '保存データを読み込めませんでした。新しい色は保存できます。';
+      } else warnStorage();
+    }
+  }
+  function persist() {
+    clearTimeout(saveTimer);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({version:1, current:rgb, saved}));
+      if (storageBroken) {
+        storageBroken = false;
+        $('storageNote').textContent = '保存した色は、このブラウザに自動で残ります';
+        $('storageNote').classList.remove('error');
+      }
+      return true;
+    } catch (error) { warnStorage(); return false; }
+  }
+  function persistSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(persist, 120); }
+  function toast(message, undo = false) {
+    clearTimeout(toastTimer);
+    $('toastText').textContent = message;
+    $('undoDelete').hidden = !undo;
+    $('toast').classList.add('show');
+    toastTimer = setTimeout(() => $('toast').classList.remove('show'), undo ? 6500 : 2300);
+  }
+  function drawColor(values) {
+    visibleRGB = values.slice();
+    $('mixedFill').setAttribute('fill', cssRGB(values));
+    $('currentHex').textContent = hex(values);
+    $('currentRGB').textContent = `RGB ${values.map(clamp).join(' · ')}`;
+    const luma = .2126 * values[0] + .7152 * values[1] + .0722 * values[2];
+    $('vessel').style.setProperty('--vessel-ink', luma > 165 ? '#2c4537' : '#ffffff');
+  }
+  function animateColor(target, instant = false) {
+    cancelAnimationFrame(colorFrame);
+    if (instant || reducedMotion.matches) { drawColor(target); return; }
+    const from = visibleRGB.slice(), start = performance.now();
+    function tick(now) {
+      const t = Math.min(1, (now - start) / 400), eased = 1 - Math.pow(1 - t, 3);
+      drawColor(from.map((v, i) => v + (target[i] - v) * eased));
+      if (t < 1) colorFrame = requestAnimationFrame(tick);
+      else { drawColor(target); if (!pouring && !queue.length) $('mixStatus').textContent = 'あなたの色ができました'; }
+    }
+    colorFrame = requestAnimationFrame(tick);
+  }
+  function syncControls() {
+    CHANNELS.forEach((letter, i) => { $('range' + letter).value = rgb[i]; $('value' + letter).value = rgb[i]; });
+    $('targetHex').textContent = hex(rgb);
+  }
+  function resetFlights() {
+    generation++;
+    queue = [];
+    pouring = false;
+    document.querySelectorAll('.drop-flight').forEach(el => el.remove());
+    document.querySelectorAll('.pipette.active').forEach(el => el.classList.remove('active'));
+    cancelAnimationFrame(colorFrame);
+  }
+  async function pourNext() {
+    if (pouring || !queue.length) return;
+    pouring = true;
+    const job = queue.shift(), token = generation;
+    const pipette = document.querySelector(`[data-pipette="${job.channel}"]`);
+    pipette.classList.add('active');
+    $('mixStatus').textContent = `${WORDS[job.channel]}を、ひとしずく。`;
+    if (!reducedMotion.matches) {
+      const flight = document.createElement('div');
+      flight.className = 'drop-flight';
+      flight.innerHTML = `<svg viewBox="0 0 20 26"><path d="M10 1C9 5 2 11 2 17a8 8 0 0 0 16 0C18 11 11 5 10 1Z" fill="${PURE[job.channel]}"/><path d="M6 14Q4 17 6 20" stroke="white" stroke-width="1.8" stroke-linecap="round" fill="none" opacity=".65"/></svg>`;
+      const stageRect = $('stage').getBoundingClientRect(), p = pipette.getBoundingClientRect(), vessel = $('vessel').getBoundingClientRect();
+      flight.style.left = `${p.left + p.width / 2 - stageRect.left - 9.5}px`;
+      flight.style.top = `${p.top + 10 - stageRect.top}px`;
+      $('stage').append(flight);
+      const dx = vessel.left + vessel.width / 2 - (p.left + p.width / 2);
+      const dy = vessel.top + vessel.height * .32 - (p.top + 10);
+      const animation = flight.animate([{transform:'translate(0,0) scale(.5)',opacity:0},{transform:'translate(0,7px) scale(1)',opacity:1,offset:.2},{transform:`translate(${dx}px,${dy}px) scale(.7)`,opacity:.9,offset:.92},{transform:`translate(${dx}px,${dy + 8}px) scale(.1)`,opacity:0}],{duration:470,easing:'cubic-bezier(.45,.06,.65,.9)'});
+      try { await animation.finished; } catch (error) { /* A reset can interrupt a drop. */ }
+      flight.remove();
+    }
+    if (token !== generation) return;
+    pipette.classList.remove('active');
+    $('vessel').classList.remove('splash');
+    void $('vessel').offsetWidth;
+    if (!reducedMotion.matches) $('vessel').classList.add('splash');
+    animateColor(job.target);
+    pouring = false;
+    if (queue.length) pourNext();
+    else if (reducedMotion.matches) $('mixStatus').textContent = 'あなたの色ができました';
+  }
+  function setChannel(index, value) {
+    const next = clamp(value);
+    if (next === rgb[index]) { syncControls(); return; }
+    rgb[index] = next;
+    syncControls();
+    // Coalesce rapid slider events into one pending drop per channel.
+    // Every pending drop receives the latest whole RGB target so the last
+    // landed drop can never restore an obsolete slider combination.
+    queue.forEach(job => { job.target = rgb.slice(); });
+    const existing = queue.find(job => job.channel === index);
+    if (existing) existing.target = rgb.slice();
+    else queue.push({channel:index, target:rgb.slice()});
+    persistSoon();
+    pourNext();
+  }
+
+  function bubblePositions(count, width) {
+    const mobile = width <= 600;
+    const shortLandscape = !mobile && innerHeight <= 480;
+    const size = mobile ? (width <= 355 ? 66 : 87) : (shortLandscape ? 70 : 115);
+    const slots = [];
+    if (mobile) {
+      // Keep the creation vessel and the title clear on a narrow screen.
+      const xs = width >= 365 ? [width * .14, width * .42, width * .71] : [width * .19, width * .67];
+      const shortMobile = innerHeight < 640;
+      slots.push({x:8, y:shortMobile ? 110 : 171}, {x:width - size - 8, y:shortMobile ? 120 : 193});
+      const rows = Math.ceil(Math.max(0,count - 2) / xs.length);
+      const height = Math.max(Math.max(405, innerHeight - 348), rows ? 413 + rows * 138 : 405);
+      for (let row = 0; row < rows; row++) xs.forEach((x, column) => slots.push({x:x - size / 2, y:421 + row * 138 + (column % 2 ? 14 : 0)}));
+      return {slots, height};
+    }
+    if (shortLandscape) {
+      const rows = Math.ceil(count / 2);
+      for (let row = 0; row < rows; row++) slots.push({x:width - size * 2 - 35, y:5 + row * 132}, {x:width - size - 10, y:17 + row * 132});
+      return {slots, height:Math.max(450, rows * 132 + 110)};
+    }
+    const heightBase = Math.max(450, innerHeight - 350);
+    const xs = width <= 900 ? [.09,.28,.82] : [.07,.22,.38,.76,.89];
+    const baseRows = Math.max(2, Math.floor(heightBase / 153));
+    for (let row = 0; row < baseRows; row++) {
+      xs.forEach((ratio, column) => {
+        if (row < 2 && column < (width <= 900 ? 2 : 3)) return;
+        slots.push({x:width * ratio - size / 2, y:(shortLandscape ? 5 : 28) + row * 153 + (column % 2 ? 22 : 0)});
+      });
+    }
+    // Fill from the vessel's right side outwards, then extend the gallery.
+    let row = baseRows;
+    while (slots.length < count) {
+      xs.forEach((ratio, column) => slots.push({x:width * ratio - size / 2, y:28 + row * 153 + (column % 2 ? 22 : 0)}));
+      row++;
+    }
+    return {slots, height:Math.max(heightBase, count ? Math.max(...slots.slice(0,count).map(p => p.y)) + 175 : heightBase)};
+  }
+  function layoutDrops() {
+    const width = $('stage').clientWidth, layout = bubblePositions(saved.length, width);
+    $('stage').style.height = layout.height + 'px';
+    // Keep the mixing vessel in the first viewport even for large collections.
+    $('mixAnchor').style.top = width <= 600 ? (innerHeight < 640 ? '167px' : '228px') : `${innerHeight <= 480 ? 96 : innerHeight <= 650 ? 147 : Math.max(450, innerHeight - 350) * .51}px`;
+    [...$('savedDrops').children].forEach((el, i) => { const p = layout.slots[i]; el.style.left = p.x + 'px'; el.style.top = p.y + 'px'; });
+  }
+  function renderSaved(newId = null) {
+    $('savedDrops').replaceChildren();
+    saved.forEach((item, i) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'saved-drop' + (item.id === newId ? ' just-saved' : '');
+      button.dataset.id = item.id;
+      button.style.setProperty('--float-duration', `${6.2 + i % 5 * .7}s`);
+      button.style.setProperty('--float-delay', `${-(i % 7) * .8}s`);
+      button.setAttribute('aria-label', `${hex(item.rgb)}、RGB ${item.rgb.join('、')}。色の詳細を開く`);
+      button.innerHTML = `<span class="drop-art">${dropSVG(item.rgb)}</span><span class="saved-code mono">${hex(item.rgb)}</span>`;
+      button.addEventListener('click', () => showDetail(item.id));
+      $('savedDrops').append(button);
+    });
+    $('savedCount').textContent = saved.length;
+    $('emptyHint').hidden = saved.length > 0;
+    layoutDrops();
+  }
+  function showDetail(itemId) {
+    const item = saved.find(item => item.id === itemId);
+    if (!item) return;
+    selectedId = itemId;
+    $('detailPreview').innerHTML = dropSVG(item.rgb);
+    $('detailHex').textContent = hex(item.rgb);
+    $('detailRGB').textContent = `R ${item.rgb[0]}  /  G ${item.rgb[1]}  /  B ${item.rgb[2]}`;
+    $('colorDetail').showModal();
+  }
+  async function copyCode(code) {
+    try {
+      if (navigator.clipboard && globalThis.isSecureContext) await navigator.clipboard.writeText(code);
+      else {
+        const field = document.createElement('textarea');
+        field.value = code; field.style.cssText = 'position:fixed;left:-9999px;top:0';
+        // A modal dialog must own the fallback field for selection to work.
+        ($('colorDetail').open ? $('colorDetail') : document.body).append(field);
+        field.select();
+        const ok = document.execCommand('copy'); field.remove();
+        if (!ok) throw new Error('Clipboard unavailable');
+      }
+      toast(`${code} をコピーしました`);
+    } catch (error) { toast(`コピーできませんでした：${code}`); }
+  }
+  CHANNELS.forEach((letter, i) => {
+    $('range' + letter).addEventListener('input', event => setChannel(i, event.target.value));
+    $('range' + letter).addEventListener('change', persist);
+    // Commit number fields when the user finishes entering a value, so
+    // syncControls does not overwrite a partially typed three-digit value.
+    $('value' + letter).addEventListener('change', event => { setChannel(i, event.target.value); persist(); });
+    $('value' + letter).addEventListener('blur', event => { setChannel(i, event.target.value); persist(); });
+    $('value' + letter).addEventListener('keydown', event => { if (event.key === 'Enter') { setChannel(i, event.target.value); persist(); event.target.blur(); } });
+  });
+  $('saveColor').addEventListener('click', () => {
+    // Save the exact requested RGB, even when its animation is still running.
+    const item = {id:id(), rgb:rgb.slice()};
+    resetFlights();
+    saved.push(item);
+    rgb = [0,0,0];
+    syncControls();
+    drawColor(rgb);
+    renderSaved(item.id);
+    const ok = persist();
+    const newDrop = [...$('savedDrops').children].find(el => el.dataset.id === item.id);
+    const mixerTop = document.querySelector('.mixer').getBoundingClientRect().top;
+    if (newDrop && newDrop.getBoundingClientRect().bottom > mixerTop - 10) {
+      const bottom = newDrop.getBoundingClientRect().bottom + scrollY;
+      scrollTo({top:Math.max(0,bottom - mixerTop + 24),behavior:reducedMotion.matches ? 'instant' : 'smooth'});
+    }
+    $('mixStatus').textContent = '次の好きな色を、つくってみよう';
+    $('liveStatus').textContent = `${hex(item.rgb)}を保存しました。保存した色は${saved.length}色です。`;
+    toast(ok ? `${hex(item.rgb)} が、仲間入り。` : '色を表示しましたが、再読み込み後の保存はできませんでした');
+  });
+  $('copyCurrent').addEventListener('click', () => copyCode(hex(rgb)));
+  $('closeDetail').addEventListener('click', () => $('colorDetail').close());
+  $('colorDetail').addEventListener('click', event => { if (event.target === $('colorDetail')) { const r = event.target.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) $('colorDetail').close(); } });
+  $('copyDetail').addEventListener('click', () => { const item = saved.find(item => item.id === selectedId); if (item) copyCode(hex(item.rgb)); });
+  $('remixColor').addEventListener('click', () => {
+    const item = saved.find(item => item.id === selectedId);
+    if (!item) return;
+    resetFlights(); rgb = item.rgb.slice(); syncControls(); animateColor(rgb);
+    persist(); $('colorDetail').close(); scrollTo({top:0,behavior:reducedMotion.matches ? 'instant' : 'smooth'});
+    $('mixStatus').textContent = 'この色から、もうひとしずく。';
+  });
+  $('deleteColor').addEventListener('click', () => {
+    const index = saved.findIndex(item => item.id === selectedId);
+    if (index < 0) return;
+    lastDeleted = {item:saved[index], index}; saved.splice(index,1);
+    $('colorDetail').close(); renderSaved(); persist(); toast('しずくを削除しました',true);
+  });
+  $('undoDelete').addEventListener('click', () => {
+    if (!lastDeleted) return;
+    saved.splice(Math.min(lastDeleted.index,saved.length),0,lastDeleted.item);
+    lastDeleted = null; renderSaved(); persist(); toast('しずくを戻しました');
+  });
+  window.addEventListener('resize', layoutDrops);
+  window.addEventListener('pagehide', persist);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) persist(); });
+  // Changes made in another tab are reflected without losing saved colors.
+  window.addEventListener('storage', event => {
+    if (event.key !== STORAGE_KEY || !event.newValue) return;
+    resetFlights(); readStorage(); syncControls(); drawColor(rgb); renderSaved();
+  });
+  readStorage(); syncControls(); drawColor(rgb); renderSaved();
+})();
+</script>
+</body>
+</html>
